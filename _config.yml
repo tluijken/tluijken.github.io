@@ -7,7 +7,7 @@
 
 # jekyll-seo-tag settings › https://github.com/jekyll/jekyll-seo-tag/blob/master/docs/usage.md
 #--------------------------
-title: Thomas Luijken Blob                          # the main title
+title: Thomas Luijken Blog                          # the main title
 
 tagline: Writing down my dev experiences.  # it will display as the sub-title
 
@@ -19,7 +19,7 @@ url: ''
 
 author: Thomas Luijken                  # change to your full name
 
-avatar: /assets/img/sample/avatar.jpg   # support internet resources
+avatar: https://avatars2.githubusercontent.com/u/35781348?s=96&v=4  # support internet resources
 
 github:
   username: tluijken             # change to your github username
