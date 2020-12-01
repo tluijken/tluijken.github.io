@@ -44,14 +44,16 @@ Based on these 4 charactaristics, we want to determine which political party eac
 We'll feed our neural network with a pre-defined set of input values, which will be pulsed through the neural network's hidden layer(s). When the pulse reaches the output nodes, we will check if the output value is correct, or not. The bigger our dataset is, the better our network can be trained. 
 
 Our dataset can look something like this:
-| AGE | INCOME  | GENDER | RELIGION   | POLITICAL PARTY |
-| :-- | :------ | :----- | :--------- | :-------------- |
-| 31  | 51.000  | Male   | Catholic   | Republican      |
-| 54  | 64.000  | Male   | Atheist    | Democratic      |
-| 48  | 43.000  | Male   | Protestant | Democratic      |
-| 24  | 24.000  | Male   | Catholic   | Republican      |
-| 35  | 46.000  | Male   | Protestant | Republican      |
-| 66  | 100.000 | Male   | Protestant | Democratic      |
+
+AGE | INCOME  | GENDER | RELIGION   | POLITICAL PARTY
+--- | ------- | ------ | ---------- | ---------------
+31  | 51.000  | Male   | Catholic   | Republican
+54  | 64.000  | Male   | Atheist    | Democratic
+48  | 43.000  | Male   | Protestant | Democratic
+24  | 24.000  | Male   | Catholic   | Republican
+35  | 46.000  | Male   | Protestant | Republican
+66  | 100.000 | Male   | Protestant | Democratic
+
 etc......
 
 The political party will be the output node in this case. 
