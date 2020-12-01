@@ -8,7 +8,7 @@ tags: [neutal network]
 
 ## Introduction
 These days, Machine Learning and Artificial Intelligence are playing a major role in our software. Big tech companies like Microsoft and Google made API's available to us, which allows us to easily embed machine learning into or software, without diving deep into the nerdy stuff. But, there are developers like me, who like the nerdy stuff. I want to know, in the basics how this stuff works. Start small, and understand the process of machine learning, rather than just consuming a public API and shouting out loud 'we use AI!' as a commercial trademark. 
-![Image]('/assets/img/neutal-network/neural_network_brain.png')
+![Image](/assets/img/neutal-network/neural_network_brain.png)
 In this article I'll explain how to build a neural network from scratch, and configure it to perform a simple XOR like operation. I won't go into too much detail on the types of machine learning, but I'll provide resources as much as possible. There is so much information regarding this on the internet, written by people who have more knowledge regarding this topic than I have.
 
 ### Short introduction to neural networks
@@ -27,7 +27,7 @@ Before we focus on artificial neural networks, it's important to state that ther
 ### Artificial neural networks
 Artificial neural networks work in pretty much the same way as our biological neural network. A neural network consist of many neurons, which are grouped into layers. A neural network at least has 1 input layer, 1 hidden layer, and 1 output layer. Depending on the complexity of the dataset we want it to learn, more hidden layers can be added.
 
-![neuralnetwork]('/assets/img/neural-network/1_YgJ6SYO7byjfCmt5uV0PmA.png')
+![neuralnetwork](/assets/img/neural-network/1_YgJ6SYO7byjfCmt5uV0PmA.png)
 
 The number of nodes (neurons) in the input layer, is usually defined by the number of input variables we have in our dataset. The number of output nodes is defined by the number of outputs we're expecting.
 
