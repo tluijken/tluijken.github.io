@@ -86,7 +86,7 @@ public void ConvertToFahrenheit(int degrees)
 }
 ```
 
-You might think: "well isn´t this obvious??", but for larger implementations i've seen
+You might think: "well isn´t this obvious??", but for larger implementations I've seen
 this gone wrong more then once. It would be great if we could get rid of all
 intermediate values as soon as possible.
 
@@ -149,7 +149,8 @@ Assert.Equal(4, multiply);
 ```
 This may look weird at first, but what we're doing here is called partial
 application. You can perform a part of the application, and re-use that part as
-much as you like:
+much as you like. Not, let this sink in. Re-using partial application could be
+very powerful, depending on the use case you're working on.
 
 ```csharp
 var multiplyByTwo = Multiply(2);
