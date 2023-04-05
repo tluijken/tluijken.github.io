@@ -6,8 +6,6 @@ categories: [Functional programming, C#]
 tags: [Functional programming, C#, Lambda, Mutability, monads, currying, railway oriented programming]
 ---
 
-# Functional programming for modern languages
-
 Having spent over 15 years writing C# code focused on Object Oriented
 Programming, I recently ventured into the Rust programming language, known for
 its functional programming capabilities. As I started to appreciate Rust's
@@ -18,7 +16,7 @@ classes and extension methods, with insights applicable to other modern
 languages that support lambda expressions or closures.
 
 
-## Characteristics of Functional programming
+# Characteristics of Functional programming
 
 Before we dive into code, I should first clarify a bit on the characteristics of
 functional programming.
@@ -57,7 +55,7 @@ ability to manage complexity and promote robust software design.
 - **Referential transparency**: Functions with the same input always produce the
   same output, making code easier to reason about and test.
 
-## Problems with imperative programming
+# Problems with imperative programming
 
 Let's start with a small example, converting from degrees Celcius to degrees
 Fahrenheit.
@@ -90,7 +88,7 @@ You might think: "well isn´t this obvious??", but for larger implementations I'
 this gone wrong more then once. It would be great if we could get rid of all
 intermediate values as soon as possible.
 
-### The Map Function
+## The Map Function
 The `Map` function is a function that takes a value, and a function to convert
 that value to another value. It would look something like this:
 
@@ -114,7 +112,7 @@ public void ConvertToFahrenheit(int degrees)
 }
 ```
 
-### Making it declaritive
+## Making it declaritive
 While the function above makes our intermediate values short lived, and
 immmutable, it still it a bit difficult to read. To make it more declaritive on
 what each step does, we could leverage [currying](https://en.wikipedia.org/wiki/Currying).
@@ -182,7 +180,7 @@ var f = degrees
 We now have a conversion from celsius to fahrenheit, using a declaritive way,
 using immutable values. It is easy to read, and far less error prone. 
 
-## A more complex example:
+# Functional validation
 Let's take a bigger example, validating a dutch phone number. We're not going to
 use regular expressions here, but the the sake of demonstration, we'll use an
 imperative implementation.
