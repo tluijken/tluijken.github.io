@@ -66,6 +66,5 @@ When training our network, we will validate the value in the output node with th
 
 
 
-
 ## Show me the code!
 The code I mentioned above can be found in [**this github repository**](https://github.com/tluijken/neural-network-demo)
