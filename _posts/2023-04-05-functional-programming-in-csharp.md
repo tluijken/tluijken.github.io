@@ -442,7 +442,7 @@ factory method. If this fails, we'll return a none, other wise we'll return
 We can now chain our `Map` calls, whithout cluttering our code with control flow
 logic.
 
-```
+```csharp
 public string GetSpouseFirstName(Person person) => 
     person
         .Map(a => a.Spouse)
@@ -454,7 +454,6 @@ spouse will be returned.
 
 We can keep going like this like there is no end in sight:
 ```csharp
-
 public string GetSpouseFirstName(Person person) => 
     person
         .Map(a => a.Spouse)
