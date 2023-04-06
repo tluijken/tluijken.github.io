@@ -88,7 +88,7 @@ You might think: "well isn´t this obvious??", but for larger implementations I'
 this gone wrong more then once. It would be great if we could get rid of all
 intermediate values as soon as possible.
 
-## The Map Function
+# Scoping and mutability
 The `Map` function is a function that takes a value, and a function to convert
 that value to another value. It would look something like this:
 
@@ -112,10 +112,11 @@ public void ConvertToFahrenheit(int degrees)
 }
 ```
 
-## Making it declaritive
+# Making it declaritive
 While the function above makes our intermediate values short lived, and
-immmutable, it still it a bit difficult to read. To make it more declaritive on
-what each step does, we could leverage [currying](https://en.wikipedia.org/wiki/Currying).
+immmutable, it still it a bit difficult to read. By making it more declaritive
+we focus much more on WHAT we want, in stead of HOW to do it. For this example,
+we could leverage [currying](https://en.wikipedia.org/wiki/Currying).
 
 Currying is a technique in functional programming where a function that takes
 multiple arguments is transformed into a sequence of functions, each taking a
@@ -180,6 +181,11 @@ var f = degrees
 We now have a conversion from celsius to fahrenheit, using a declaritive way,
 using immutable values. It is easy to read, and far less error prone. 
 
+> But that seems like a lot of work, for such a simple task Thomas.
+
+For this simple example it is, but remember that these functions we made are
+generic and can be packaged and re-used across multiple project.
+
 # Functional validation
 Let's take a bigger example, validating a dutch phone number. We're not going to
 use regular expressions here, but the the sake of demonstration, we'll use an
@@ -235,4 +241,235 @@ private static bool ValidateDutchPhoneNumberImperative(string dutchPhoneNumber)
 We have several steps to validate if a phone number is correct. If one of the
 steps fails, we return as early as possible, to save CPU cycles.
 
-....TO BE CONTINUED
+Again, this imperative approach focussed a lot more on how to validate the phone
+number, in stead of what we want. There is a lot of noise in this
+implementation, with if checks, return statements, making it increasingly
+difficult to read.
+
+For this, we could use a [Higher order function](https://en.wikipedia.org/wiki/Higher-order_function)
+and pass in a set of validation functions and aggregating over those.
+
+First, let's split up the various validations we want in names functions
+```csharp
+private static readonly Func<string, bool> ValidateAllDigits =
+    dutchPhoneNumber => dutchPhoneNumber[1..].All(char.IsDigit);
+
+private static readonly Func<string, bool> ValidatePhoneNumberLength =
+    dutchPhoneNumber => dutchPhoneNumber.Length is 10 or 12 or 13;
+
+private static readonly Func<string, bool> ValidatePhoneNumberPrefix = dutchPhoneNumber =>
+    dutchPhoneNumber.StartsWith("0") || dutchPhoneNumber.StartsWith("0031") || dutchPhoneNumber.StartsWith("+31");
+
+private static readonly Func<string, bool> ValidateNumberWithoutPrefixLength =
+    dutchPhoneNumber => SubtractPrefix(dutchPhoneNumber).Length == 9;
+
+private static readonly Func<string, bool> ValidateNumberWithoutPrefixIsNotZero =
+    dutchPhoneNumber => !SubtractPrefix(dutchPhoneNumber).StartsWith("0");
+
+private static readonly Func<string, string> SubtractPrefix = dutchPhoneNumber =>
+    dutchPhoneNumber.StartsWith("0031") 
+        ? dutchPhoneNumber[4..] 
+        : dutchPhoneNumber.StartsWith("+31") 
+            ? dutchPhoneNumber[3..] 
+            : dutchPhoneNumber[1..];
+
+```
+
+This does the exact same as the imerative checks before, but split up and names
+properly. 
+
+Now, we can create a `Validate` extention method where we would pass in all of
+the validation functions.
+```csharp
+public static bool Validate<T>(this T @this, params Func<T, bool>[] predicates) => predicates.All(p => p(@this));
+```
+
+Now, the cool part about using the `All` method on the predicates, is that it
+returns `false` as soon as one of the predicates fails to return true. This is
+the same equivalent of the early `return false` statements in the imperative
+implementation.
+
+To wrap this up by calling the `Validate` method on the phonenumber itself.
+```csharp
+private static bool ValidateDutchPhoneNumberFunctional(string dutchPhoneNumber) =>
+    dutchPhoneNumber.Validate(
+        ValidatePhoneNumberLength,
+        ValidatePhoneNumberPrefix,
+        ValidateAllDigits,
+        ValidateNumberWithoutPrefixLength,
+        ValidateNumberWithoutPrefixIsNotZero
+    );
+```
+
+Again, this focusses much more on what we want, in stead of how to do it. Adding
+additional validations will be very easy as we can just add it to the
+validations, and don't have to navigate the control flow of the imperative
+implementtion.
+
+You don't have to do this using named functions of course. Passing in anonymous
+functions will work just as fine. Here's another example to demonstrate this.
+
+```csharp
+[Theory]
+[InlineData("Thomas Luijken", true)]
+[InlineData("Justin Bieber", false)]
+[InlineData("Ju", false)]
+[InlineData("This is a username that is way too long", false)]
+public void ValidateUsername(string userName, bool valid)
+{
+    var validateUserName = userName.Validate(
+        un => !string.IsNullOrWhiteSpace(un),
+        un => un.Length >= 3,
+        un => un.Length <= 20,
+        un => !un.Equals("Justin Bieber"));
+    Assert.Equal(valid, validateUserName);
+}
+```
+
+# Monads
+In a lot of cases we want to convert data in a sequence of stept to something
+else. Take this person class for example
+
+```csharp
+public record Person
+{
+    public string FirstName { get; init; }
+    public string LastName { get; init; }
+    public int Age { get; init; }
+    public Person Spouse { get; init; }
+}
+```
+If we have a person record and we want to get the firstname of the Spouse, we
+could get it like so:
+```csharp
+public string GetSpouseFirstName(Person person)
+{
+    var spouse = person.Spouse;
+    var spouseFirstName = spouse.FirstName;
+    return spouseFirstName
+}
+```
+
+However, depending on the language version you're using, and the nullable
+settings for your project, either of these values can be null (dispite what the
+compiler is telling you), and our operation would fail at runtime.
+
+To remedy this, we would need a couple of checks.
+
+```csharp
+public string GetSpouseFirstName(Person person)
+{
+    if (person is not null) {
+        var spouse = person.Spouse;
+        if (spouse is not null)
+        {
+            var spouseFirstName = spouse.FirstName;
+            if (spouseFirstName is not null)
+            {
+                return spouseFirstName
+            }
+        }
+    }
+    return string.Empty;
+}
+```
+This adds a lot of clutter to our code, shifting the focus on what we're trying
+to accomplish. 
+
+In stead, we could use a design pattern, in which the pipeline implementation is
+abstracted, by wrapping a value in a type. This is refered to as a [Monad](https://en.wikipedia.org/wiki/Monad_(functional_programming))
+
+You'll find Result or Options (also called a Maybe) types within functional
+programming, which wrap the values for each result in a pipeline.
+
+This is what our `Option` type looks like:
+```csharp
+public abstract record Option<T>
+{
+    // by using the implicit operator, we can directly convert a value of T to an Option<T> being either Some<T> or None<T>
+    public static implicit operator Option<T>(T value) => value is null ? new None<T>() : new Some<T>(value);
+}
+```
+
+For our `Option` type, I will define 2 subtypes: Some and None:
+```csharp
+public record Some<T>(T Value) : Option<T>
+{
+    // by using the implicit operator, we can directly convert a value of T to an Some<T>
+    public static implicit operator Some<T>(T value) => new(value);
+    
+    // Additionally, we can also convert an Some<T> to a T implicitly
+    public static implicit operator T(Some<T> @this) => @this.Value;
+}
+
+// Hello darkness, my old friend
+public record None<T> : Option<T>;
+```
+
+A value can implicitly converted to `Some` if the value is not null, and
+implicily be converted to `None` if the value is null.
+
+Now, let´s extend our mapping function a bit:
+
+```csharp
+public static Option<TTarget> Map<TSource, TTarget>(this Option<TSource> source, Func<TSource, TTarget> factory) =>
+    source switch
+    {
+        Some<TSource> some => TryCreate(() => factory(some.Value)),
+        _ => new None<TTarget>()
+    };
+
+private static Option<T> TryCreate<T>(Func<T> func)
+{
+    try
+    {
+        return new Some<T>(func());
+    }
+    catch
+    {
+        return new None<T>();
+    }
+}
+```
+
+In this case, we will check if the value we got in was actually a value. If we
+got a `None` value, we will also return a `None`.
+
+If we actually got `Some` value, we will try to map the value by using the
+factory method. If this fails, we'll return a none, other wise we'll return
+`Some` value.
+
+We can now chain our `Map` calls, whithout cluttering our code with control flow
+logic.
+
+```
+public string GetSpouseFirstName(Person person) => 
+    person
+        .Map(a => a.Spouse)
+        .Map(spouse => spouse.FirstName);
+```
+If person has no value, or the spouse has no value, or the firstname has no
+value, we will just return null. If all values are set, the firstname of the
+spouse will be returned.
+
+We can keep going like this like there is no end in sight:
+```csharp
+
+public string GetSpouseFirstName(Person person) => 
+    person
+        .Map(a => a.Spouse)
+        .Map(a => a.Spouse)
+        .Map(a => a.Spouse)
+        .Map(a => a.Spouse)
+        .Map(a => a.Spouse)
+        .Map(a => a.Spouse)
+        .Map(a => a.Spouse)
+        .Map(a => a.Spouse)
+        .Map(a => a.Spouse)
+        .Map(spouse => spouse.FirstName);
+```
+We get the spouse, of the spouse of the spouse of the spouse....anyway, this
+will result in a null value along the line somewhere.
+
+This is also referred to as [Railway oriented programming](https://fsharpforfunandprofit.com/rop/).
+
