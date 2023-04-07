@@ -15,6 +15,8 @@ cover how you can leverage functional programming in C# using a few simple
 classes and extension methods, with insights applicable to other modern
 languages that support lambda expressions or closures.
 
+All code for this blogpost can be found [in this Github
+repository](https://github.com/tluijken/functional-csharp-examples)
 
 # Characteristics of Functional programming
 
@@ -640,12 +642,27 @@ within our sequence, our test would still succeed, as we're not referring to a
 mutable instance. This is a prime example of pure functions, where we have no
 side effects.
 
+# References
+
+If you want
+to leverage this in your own project there are a number of packages you could
+include in your project to get started quickly:
+
+- [LanguageExt](https://github.com/louthy/language-ext)
+- [RSharp](https://github.com/tluijken/rsharp) (written by yours truly)
+- [CSharpFunctionalExtensions](https://github.com/vkhorikov/CSharpFunctionalExtensions)
+
+Also a big shoutout to [Simon Painter](https://github.com/madSimonJ) for
+providing excellent content via
+[YouTube](https://www.youtube.com/results?search_query=simon+painter).
+
 # Closing words
 
-I hope you enjoyed this post on functional programming and pipelines. By
-leveraging these concepts, we can create more maintainable, reusable and
-testable code. Although functional programming can be daunting at first, with a
-little bit of practice and experimentation, it can be a very powerful tool in
-your development arsenal. I hope you found this post informative and valuable.
+I hope you enjoyed this post on functional programming. By leveraging these
+concepts, we can create more maintainable, reusable and testable code. Although
+functional programming can be daunting at first, with a little bit of practice
+and experimentation, it can be a very powerful tool in your development arsenal.
+I hope you found this post informative and valuable.
 
 Thank you for reading!
+
