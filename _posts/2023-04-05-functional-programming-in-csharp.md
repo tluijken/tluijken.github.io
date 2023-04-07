@@ -467,14 +467,13 @@ for handling null values.
 
 ```csharp
 public string GetSpouseFirstName(Person person) => 
-    person
-        .ToOption()
-        .Map(a => a.Spouse)
-        .Map(spouse => spouse.FirstName);
+    person.Map(a => a.Spouse)
+          .Map(spouse => spouse.FirstName);
 ```
-If the person is `None`, or the `spouse` is `None`, or the `firstname` of the spouse is
-`None`, we will just return `None`. If all values are set, the firstname of the
-spouse will be returned. 
+
+If the person is `None`, or the `spouse` is `None`, or the `firstname` of the
+spouse is `None`, we will just return `None`. If all values are set, the
+firstname of the spouse will be returned. 
 
 We can continue chaining these operations to process the data as needed.
 
@@ -498,3 +497,72 @@ spouse of the spouse of the spouse, and so on, until we eventually encounter a
 null value somewhere in the chain. This approach is also known as "[Railway
 oriented programming](https://fsharpforfunandprofit.com/rop/)", which emphasizes
 handling success and failure paths in a linear manner. 
+
+
+# Performing intermediate logic
+
+At times, you may want to include additional logic in the pipelines mentioned
+earlier. For instance, you may want to log an intermediate value before
+proceeding with further operations on the same result.
+
+```csharp
+public void TestTeeImperative(Person person)
+{
+    var spouse = person.Spouse;
+    if (spouse is not null)
+    {
+        _testOutputHelper.WriteLine($"{spouse.FirstName} is {spouse.Age} years old");
+        if (spouse.FirstName is not null)
+        {
+            if (spouse.FirstName.Length > 0)
+            {
+                Assert.Equal("Jane", spouse.FirstName);
+            }
+        }
+        else
+        {
+            throw new Exception("Spouse's first name is null");
+        }
+    }
+    else
+    {
+        _testOutputHelper.WriteLine("No spouse");
+    }
+}
+```
+Functional programming can be used to accomplish this goal by creating a function known as `Tee`.
+
+> The term 'Tee' is named after the Unix command 'tee', which is named after the
+> T-shaped pipe fitting.
+
+```csharp
+public static T Tee<T>(this T @this, Action<T> action)
+{
+    if (@this is not null && @this is not None<T>)
+        action(@this);
+    return @this;
+}
+```
+
+We can now achieve the same, but calling the `Tee` function where we want:
+```csharp
+public void TestTeeFunctional(Person person)
+{
+    var spouseFirstName = person
+        .Map(a => a.Spouse)
+        .Tee(d => _testOutputHelper.WriteLine(d switch
+                    {
+                    Some<Person> spouse  => $"{spouse.Value.FirstName} is {spouse.Value.Age} years old",
+                    _ => "No spouse"
+                    }))
+    .Map(spouse => spouse.FirstName);
+
+    Assert.Equal("Jane", spouseFirstName);
+}
+```
+
+As you can see, the logic for printing whether the spouse has a value is now
+grouped within the same scope, and not divided over multiple lines. After we're
+done logging the spouse value, we can continue mapping as before. This allows us
+to perform additional operations on the same result without breaking the
+pipeline, making our code more readable and maintainable.
