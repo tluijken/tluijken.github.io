@@ -566,3 +566,86 @@ grouped within the same scope, and not divided over multiple lines. After we're
 done logging the spouse value, we can continue mapping as before. This allows us
 to perform additional operations on the same result without breaking the
 pipeline, making our code more readable and maintainable.
+
+# Mutability
+
+I really like the fact that the Rust programming language is designed to be
+immutable by default, unless specified otherwise, which can be challenging for
+some developers at first. However, it is a good practice to consider whether a
+value should be mutable or not, as many issues with state and concurrency can
+lead to various bugs. By defaulting to immutability, we force ourselves to think
+about these issues more carefully.
+
+In C#, the introduction of records and the `with` operator has made it much
+easier to have immutable types and values. In our `Person` record, the fields are
+immutable, so they can only be set once on an instance.
+
+```csharp
+private readonly Person _person;
+
+public ImmutabilityTests()
+{
+    // Create a new instance of the Person class.
+    // All properties are readonly, so we can't change the value of the properties.
+    _person = new Person
+    {
+        FirstName = "John",
+                  LastName = "Doe",
+                  Age = 42,
+    };
+}
+
+[Fact]
+public void TestImmutablePerson()
+{
+    // We can't change the value of the FirstName property, because it is readonly.
+    _person.FirstName = "Jane";
+    // We can't change the value of the LastName property, because it is readonly.
+    _person.LastName = "Doe";
+    // We can't change the value of the Age property, because it is readonly.
+     _person.Age = 42;
+    // We can't change the value of the Spouse property, because it is readonly.
+    _person.Spouse = new Person
+    {
+        FirstName = "Jane",
+        LastName = "Doe",
+        Age = 42
+    };
+    Assert.Equal("John", _person.FirstName);
+}
+
+```
+
+Our compiler will not allow the code snippet above to compile, as the properties
+on the `Person` record can only be set when the instance is instantiated.
+Therefore, what we actually need is an updated version of that instance. The
+`with` operator allows us to create a copy of the original record, initializing
+the members with the same values as the original, or a different value if
+specified within the `with` operator. Since the fields on our `Person` record
+are immutable, this will create a new instance of the `Person` record with the
+updated fields.
+
+```csharp
+[Fact]
+public void TestImmutablePersonWithWith()
+{
+    var alteredPerson = _person.Map(p => p with { FirstName = "Jane" }).Unwrap();
+    Assert.Equal("John", _person.FirstName);
+    Assert.Equal("Jane", alteredPerson.FirstName);
+}
+```
+
+If another thread comes along and alters the `_person` private field somewhere
+within our sequence, our test would still succeed, as we're not referring to a
+mutable instance. This is a prime example of pure functions, where we have no
+side effects.
+
+# Closing words
+
+I hope you enjoyed this post on functional programming and pipelines. By
+leveraging these concepts, we can create more maintainable, reusable and
+testable code. Although functional programming can be daunting at first, with a
+little bit of practice and experimentation, it can be a very powerful tool in
+your development arsenal. I hope you found this post informative and valuable.
+
+Thank you for reading!
