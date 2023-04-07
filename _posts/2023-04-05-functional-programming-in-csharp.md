@@ -57,8 +57,7 @@ ability to manage complexity and promote robust software design.
 
 # Problems with imperative programming
 
-Let's start with a small example, converting from degrees Celcius to degrees
-Fahrenheit.
+Let's start with a quick example: converting Celsius to Fahrenheit.
 
 ```csharp
 public void ConvertToFahrenheit(int degrees)
@@ -70,9 +69,10 @@ public void ConvertToFahrenheit(int degrees)
 }
 ```
 
-Notice a, b and c live longer than they need to and can be used outside of the
-scope they were intended for. I could potentially use a, b or c in another part
-of the code and get unexpected results.
+It's worth noting that a, b, and c have a longer lifespan than necessary and
+could be unintentionally used elsewhere in the code. This could result in
+unexpected outcomes, so it's important to be cautious when reusing variables
+outside of their intended scope.
 
 ```csharp
 public void ConvertToFahrenheit(int degrees)
@@ -84,21 +84,25 @@ public void ConvertToFahrenheit(int degrees)
 }
 ```
 
-You might think: "well isn´t this obvious??", but for larger implementations I've seen
-this gone wrong more then once. It would be great if we could get rid of all
-intermediate values as soon as possible.
+While it may seem obvious, I've seen this mistake happen more than once in
+larger code implementations. To prevent unexpected outcomes, it's best to
+eliminate intermediate values as soon as they are no longer needed. This helps
+to avoid unintentional reuse of variables outside of their intended scope.
 
 # Scoping and mutability
-The `Map` function is a function that takes a value, and a function to convert
-that value to another value. It would look something like this:
+Scoping and mutability are important concepts to keep in mind when working with
+variables in a program. As for the Map function, it takes a value and a
+conversion function, which enables the transformation of values in a clear and
+concise way. To illustrate, consider the following example:
 
 ```csharp
 public static TTarget Map<TSource, TTarget>(this TSource source, Func<TSource, TTarget> factory) => factory(source);
 ```
 
-I can now use this method to perform the same steps as above, but placing the
-intermediate values out of scope as soon as possible. Because the converted
-value is returned, we can just chain a new Map function to it and keep going.
+By utilizing this method, I can perform the same steps as before while ensuring
+that intermediate values are scoped appropriately. Since the converted value is
+returned, we can immediately chain a new Map function to it and continue
+processing without having to worry about reusing variables unintentionally.
 
 ```csharp
 public void ConvertToFahrenheit(int degrees)
@@ -113,16 +117,18 @@ public void ConvertToFahrenheit(int degrees)
 ```
 
 # Making it declaritive
-While the function above makes our intermediate values short lived, and
-immmutable, it still it a bit difficult to read. By making it more declaritive
-we focus much more on WHAT we want, in stead of HOW to do it. For this example,
-we could leverage [currying](https://en.wikipedia.org/wiki/Currying).
+Although the previous function ensures that intermediate values are short-lived
+and immutable, it can still be challenging to read and understand. However, by
+making it more declarative, we can shift our focus to what we want to accomplish
+rather than how to do it. One approach to achieving this is by utilizing a
+technique called [currying](https://en.wikipedia.org/wiki/Currying).
 
-Currying is a technique in functional programming where a function that takes
-multiple arguments is transformed into a sequence of functions, each taking a
-single argument and returning another function until all arguments are supplied.
+Currying transforms a multi-argument function into a series of single-argument
+functions that return another function, until all necessary arguments are
+provided.
 
-This is an example of a curried function:
+To illustrate, consider the following example of a curried function:
+
 ```csharp
 private static readonly Func<double, Func<double, double>> Multiply = x => y => y * x;
 ```
@@ -138,18 +144,21 @@ private static Func<double, double> Multiply(double x)
 }
 ```
 
-The function Multiply, takes in a paramater (the multiplier), and returns a new
-function, what multiplies the given value with the multiplier set before.
+The Multiply function takes a parameter (the multiplier) and returns a new
+function that multiplies a given value by the specified multiplier. When calling
+a curried function, you can do so by providing the arguments one at a time, like
+this:
 
-To call a curried function, you would call it like to:
 ```csharp
 var multiply = Multiply(2)(2);
 Assert.Equal(4, multiply);
 ```
-This may look weird at first, but what we're doing here is called partial
-application. You can perform a part of the application, and re-use that part as
-much as you like. Not, let this sink in. Re-using partial application could be
-very powerful, depending on the use case you're working on.
+
+Although it may seem unconventional at first, what we're doing here is actually
+an example of partial application. With partial application, you can supply some
+of the arguments ahead of time and reuse that partial application as many times
+as needed. This can be a powerful technique depending on the use case you're
+working on, so take a moment to let it sink in.
 
 ```csharp
 var multiplyByTwo = Multiply(2);
@@ -158,8 +167,8 @@ Assert.Equal(6, multiplyByTwo(3));
 Assert.Equal(8, multiplyByTwo(4));
 ```
 
-So, using our Map function, we could use these curried functions to apply the
-transformations:
+Now, let's consider how we could use these curried functions with our `Map`
+function to apply the necessary transformations:
 
 ```csharp
 var f = degrees                                                                                  
@@ -168,8 +177,8 @@ var f = degrees
     .Map(x => Add(32)(x));                                                                                     
 ```
 
-And finally, we can use the short-hand notation C# provides to apply the curried
-functions:
+To simplify the process even further, we can utilize the shorthand notation that
+C# provides to apply the curried functions:
 
 ```csharp
 var f = degrees
@@ -178,18 +187,22 @@ var f = degrees
     .Map(Add(32));
 ```
 
-We now have a conversion from celsius to fahrenheit, using a declaritive way,
-using immutable values. It is easy to read, and far less error prone. 
+By implementing a declarative approach that utilizes immutable values, we now
+have a clear and concise conversion from Celsius to Fahrenheit that is easy to
+read and far less prone to errors.
 
 > But that seems like a lot of work, for such a simple task Thomas.
 
-For this simple example it is, but remember that these functions we made are
-generic and can be packaged and re-used across multiple project.
+While it may seem like a lot of work for such a simple task, it's important to
+keep in mind that the functions we created can be packaged and reused across
+multiple projects. This makes the investment of time and effort in creating them
+well worth it in the long run, as it can lead to greater efficiency and
+consistency in your codebase.
 
 # Functional validation
-Let's take a bigger example, validating a dutch phone number. We're not going to
-use regular expressions here, but the the sake of demonstration, we'll use an
-imperative implementation.
+Now, let's consider a larger example: validating a Dutch phone number. While we
+won't be using regular expressions in this example, we'll provide an imperative
+implementation to illustrate the concept.
 
 ```csharp
 private static bool ValidateDutchPhoneNumberImperative(string dutchPhoneNumber)
@@ -237,19 +250,20 @@ private static bool ValidateDutchPhoneNumberImperative(string dutchPhoneNumber)
     return true;
 }
 ```
+To validate a phone number, there are several steps involved. If any of these
+steps fail, it's important to return as early as possible to save CPU cycles.
+However, the imperative approach used to accomplish this focuses primarily on
+how to validate the phone number, rather than what we actually want to achieve.
+This can result in a lot of noise, with if checks and return statements that
+make the code difficult to read.
 
-We have several steps to validate if a phone number is correct. If one of the
-steps fails, we return as early as possible, to save CPU cycles.
+To address this issue, we can utilize a
+[higher-order](https://en.wikipedia.org/wiki/Higher-order_function) function and
+pass in a set of validation functions to aggregate over. This will allow us to
+focus more on the what of the problem, rather than the how. 
 
-Again, this imperative approach focussed a lot more on how to validate the phone
-number, in stead of what we want. There is a lot of noise in this
-implementation, with if checks, return statements, making it increasingly
-difficult to read.
+First, we'll need to split up the various validations into named functions.
 
-For this, we could use a [Higher order function](https://en.wikipedia.org/wiki/Higher-order_function)
-and pass in a set of validation functions and aggregating over those.
-
-First, let's split up the various validations we want in names functions
 ```csharp
 private static readonly Func<string, bool> ValidateAllDigits =
     dutchPhoneNumber => dutchPhoneNumber[1..].All(char.IsDigit);
@@ -275,21 +289,24 @@ private static readonly Func<string, string> SubtractPrefix = dutchPhoneNumber =
 
 ```
 
-This does the exact same as the imerative checks before, but split up and names
-properly. 
+This accomplishes the same result as the previous imperative approach, but with
+the validations split up into named functions. 
 
-Now, we can create a `Validate` extention method where we would pass in all of
-the validation functions.
+Now, we can further improve this by using a higher-order function to aggregate
+over the validation functions. We can create a Validate extension method that
+takes in all of the validation functions as arguments.
+
 ```csharp
 public static bool Validate<T>(this T @this, params Func<T, bool>[] predicates) => predicates.All(p => p(@this));
 ```
 
-Now, the cool part about using the `All` method on the predicates, is that it
-returns `false` as soon as one of the predicates fails to return true. This is
-the same equivalent of the early `return false` statements in the imperative
-implementation.
+The All method used on the predicates is a useful feature because it returns
+false as soon as one of the predicates fails to return true, which is equivalent
+to the early return false statements used in the imperative implementation. By
+using the `Validate` method on the phone number itself, we can easily validate the
+number using a declarative approach with more readable code that focuses on what
+we want rather than how we want to validate it.
 
-To wrap this up by calling the `Validate` method on the phonenumber itself.
 ```csharp
 private static bool ValidateDutchPhoneNumberFunctional(string dutchPhoneNumber) =>
     dutchPhoneNumber.Validate(
@@ -301,13 +318,13 @@ private static bool ValidateDutchPhoneNumberFunctional(string dutchPhoneNumber) 
     );
 ```
 
-Again, this focusses much more on what we want, in stead of how to do it. Adding
-additional validations will be very easy as we can just add it to the
-validations, and don't have to navigate the control flow of the imperative
-implementtion.
+Adding additional validations becomes much easier as we can simply add them to
+the list of validations without worrying about the control flow of an imperative
+implementation.
 
-You don't have to do this using named functions of course. Passing in anonymous
-functions will work just as fine. Here's another example to demonstrate this.
+Anonymous functions can also be used in place of named functions for more
+concise code. Here's an example using anonymous functions to validate an email
+address.
 
 ```csharp
 [Theory]
@@ -327,8 +344,9 @@ public void ValidateUsername(string userName, bool valid)
 ```
 
 # Monads
-In a lot of cases we want to convert data in a sequence of stept to something
-else. Take this person class for example
+
+In many cases, we need to convert data in a sequence of steps into a different
+form. Consider this `Person` class, for example
 
 ```csharp
 public record Person
@@ -339,8 +357,10 @@ public record Person
     public Person Spouse { get; init; }
 }
 ```
-If we have a person record and we want to get the firstname of the Spouse, we
-could get it like so:
+
+If we have a person record and we want to get the first name of the spouse, we
+can access it like this:
+
 ```csharp
 public string GetSpouseFirstName(Person person)
 {
@@ -350,11 +370,10 @@ public string GetSpouseFirstName(Person person)
 }
 ```
 
-However, depending on the language version you're using, and the nullable
-settings for your project, either of these values can be null (dispite what the
-compiler is telling you), and our operation would fail at runtime.
-
-To remedy this, we would need a couple of checks.
+However, depending on the language version and the nullable settings for your
+project, either of these values can be null, despite what the compiler may
+suggest, and the operation would fail at runtime. To handle this, we would need
+to add null checks.
 
 ```csharp
 public string GetSpouseFirstName(Person person)
@@ -373,16 +392,17 @@ public string GetSpouseFirstName(Person person)
     return string.Empty;
 }
 ```
-This adds a lot of clutter to our code, shifting the focus on what we're trying
-to accomplish. 
+This approach adds a lot of clutter to our code and shifts the focus away from
+what we're trying to accomplish. To avoid this, we can use a design pattern in
+which the pipeline implementation is abstracted by wrapping a value in a type.
+This pattern is called a
+[Monad](https://en.wikipedia.org/wiki/Monad_(functional_programming)), which you
+can learn more about in the functional programming paradigm. Within functional
+programming, you'll find types such as Result or Option (also called Maybe) that
+wrap the values for each result in a pipeline.
 
-In stead, we could use a design pattern, in which the pipeline implementation is
-abstracted, by wrapping a value in a type. This is refered to as a [Monad](https://en.wikipedia.org/wiki/Monad_(functional_programming))
+Here's what our `Option` type looks like:
 
-You'll find Result or Options (also called a Maybe) types within functional
-programming, which wrap the values for each result in a pipeline.
-
-This is what our `Option` type looks like:
 ```csharp
 public abstract record Option<T>
 {
@@ -392,6 +412,7 @@ public abstract record Option<T>
 ```
 
 For our `Option` type, I will define 2 subtypes: Some and None:
+
 ```csharp
 public record Some<T>(T Value) : Option<T>
 {
@@ -406,10 +427,10 @@ public record Some<T>(T Value) : Option<T>
 public record None<T> : Option<T>;
 ```
 
-A value can implicitly converted to `Some` if the value is not null, and
-implicily be converted to `None` if the value is null.
+A value can be implicitly converted to Some if the value is not null, and can be
+implicitly converted to None if the value is null.
 
-Now, let´s extend our mapping function a bit:
+Now, let's extend our mapping function a bit:
 
 ```csharp
 public static Option<TTarget> Map<TSource, TTarget>(this Option<TSource> source, Func<TSource, TTarget> factory) =>
@@ -432,31 +453,35 @@ private static Option<T> TryCreate<T>(Func<T> func)
 }
 ```
 
-In this case, we will check if the value we got in was actually a value. If we
-got a `None` value, we will also return a `None`.
+In this case, we first check if the value we got is actually a value or if it's
+None. If we got a None value, we'll simply return another None.
 
-If we actually got `Some` value, we will try to map the value by using the
-factory method. If this fails, we'll return a none, other wise we'll return
-`Some` value.
+If we got a Some value, we can now safely attempt to map the value by using the
+provided factory method. If the mapping fails, we'll return None. Otherwise,
+we'll return a new Some value wrapping the mapped result.
 
-We can now chain our `Map` calls, whithout cluttering our code with control flow
-logic.
+By abstracting this logic away into the Map method, we can now chain our calls
+without worrying about control flow or null checks. This allows us to focus on
+the data transformations we want to achieve, rather than the boilerplate code
+for handling null values.
+
+```csharp
+public string GetSpouseFirstName(Person person) => 
+    person
+        .ToOption()
+        .Map(a => a.Spouse)
+        .Map(spouse => spouse.FirstName);
+```
+If the person is `None`, or the `spouse` is `None`, or the `firstname` of the spouse is
+`None`, we will just return `None`. If all values are set, the firstname of the
+spouse will be returned. 
+
+We can continue chaining these operations to process the data as needed.
 
 ```csharp
 public string GetSpouseFirstName(Person person) => 
     person
         .Map(a => a.Spouse)
-        .Map(spouse => spouse.FirstName);
-```
-If person has no value, or the spouse has no value, or the firstname has no
-value, we will just return null. If all values are set, the firstname of the
-spouse will be returned.
-
-We can keep going like this like there is no end in sight:
-```csharp
-public string GetSpouseFirstName(Person person) => 
-    person
-        .Map(a => a.Spouse)
         .Map(a => a.Spouse)
         .Map(a => a.Spouse)
         .Map(a => a.Spouse)
@@ -467,8 +492,9 @@ public string GetSpouseFirstName(Person person) =>
         .Map(a => a.Spouse)
         .Map(spouse => spouse.FirstName);
 ```
-We get the spouse, of the spouse of the spouse of the spouse....anyway, this
-will result in a null value along the line somewhere.
 
-This is also referred to as [Railway oriented programming](https://fsharpforfunandprofit.com/rop/).
-
+The code in the previous paragraph illustrates a situation where we get the
+spouse of the spouse of the spouse, and so on, until we eventually encounter a
+null value somewhere in the chain. This approach is also known as "[Railway
+oriented programming](https://fsharpforfunandprofit.com/rop/)", which emphasizes
+handling success and failure paths in a linear manner. 
