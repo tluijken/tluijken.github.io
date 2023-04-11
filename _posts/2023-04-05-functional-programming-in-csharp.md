@@ -325,8 +325,8 @@ the list of validations without worrying about the control flow of an imperative
 implementation.
 
 Anonymous functions can also be used in place of named functions for more
-concise code. Here's an example using anonymous functions to validate an email
-address.
+concise code. Here's an example using anonymous functions to validate a
+username.
 
 ```csharp
 [Theory]
