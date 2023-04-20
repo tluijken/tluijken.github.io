@@ -534,41 +534,44 @@ copied easily.
 ## Sooooo, how do we fix this?
 
 We could do a couple of things here.
-* We could clone the "Hello" (a) value. We get another instance of "Hello" (b)
+
+1. We could clone the "Hello" (a) value. We get another instance of "Hello" (b)
   on the heap, which is only alive during scope of `some_other_function` making
   the `input` parameter the owner of that reference. `var_b` will stay the owner
   of it's own copy (a) and a will be alive during the 3rd line where the output
   get's printed. However, this is expensive, and not necessary.
-```rust
-fn main() {
-    let var_b: String = String::from("Hello");
-    some_other_function(var_b.clone());
-    println!("{}", var_b);
-}
 
-fn some_other_function(input: String) {
-    println!("{}", input);
-}
-```
+  ```rust
+  fn main() {
+      let var_b: String = String::from("Hello");
+      some_other_function(var_b.clone());
+      println!("{}", var_b);
+  }
+  
+  fn some_other_function(input: String) {
+      println!("{}", input);
+  }
+  ```
 
-* We could pass back the ownership of "Hello" to `var_b`. We don't have 2 copies
+2. We could pass back the ownership of "Hello" to `var_b`. We don't have 2 copies
   on the heap, and the item will live long enough as the ownership is moved back
   and forth. Note that we're modifying `var_b` and thus it should be marked as
   mutable.
-> It is good to mention that in rust, everything is immutable by default.
 
-```rust
-fn main() {
-    let mut var_b: String = String::from("Hello");
-    var_b = some_other_function(var_b);
-    println!("{}", var_b);
-}
+  > It is good to mention that in rust, everything is immutable by default.
 
-fn some_other_function(input: String) -> String {
-    println!("{}", input);
-    input
-}
-```
+  ```rust
+  fn main() {
+      let mut var_b: String = String::from("Hello");
+      var_b = some_other_function(var_b);
+      println!("{}", var_b);
+  }
+  
+  fn some_other_function(input: String) -> String {
+      println!("{}", input);
+      input
+  }
+  ```
 
 # Borrowing!
 Although the examples above work, they are not recommended as they are not
