@@ -535,7 +535,7 @@ copied easily.
 
 We could do a couple of things here.
 
-1. We could clone the "Hello" (a) value. We get another instance of "Hello" (b)
+* We could clone the "Hello" (a) value. We get another instance of "Hello" (b)
   on the heap, which is only alive during scope of `some_other_function` making
   the `input` parameter the owner of that reference. `var_b` will stay the owner
   of it's own copy (a) and a will be alive during the 3rd line where the output
@@ -553,7 +553,7 @@ We could do a couple of things here.
   }
   ```
 
-2. We could pass back the ownership of "Hello" to `var_b`. We don't have 2 copies
+* We could pass back the ownership of "Hello" to `var_b`. We don't have 2 copies
   on the heap, and the item will live long enough as the ownership is moved back
   and forth. Note that we're modifying `var_b` and thus it should be marked as
   mutable.
