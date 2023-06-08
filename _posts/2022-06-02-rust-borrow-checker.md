@@ -36,47 +36,11 @@ fn main() {
 ```
 
 You can see this as a sheet of paper, where containing the following items.
+![image](/assets/img/getting_started_with_rust/01.png)
 
-```
-┌─────────────────────┐
-│                     │
-│  Main()             │
-│                     │
-│  var_a = 6          │
-│                     │
-│  var_b = 7.0        │
-│                     │
-│  var_c = true       │
-│                     │
-│                     │
-│                     │
-│                     │
-│                     │
-│                     │
-└─────────────────────┘
-```
 
 The stack now looks like this.
-
-```
-┌────────────────────────┐
-│                        │
-│     var_c = true       │
-│                        │
-└────────────────────────┘
-
-┌────────────────────────┐
-│                        │
-│     var_b = 7          │
-│                        │
-└────────────────────────┘
-
-┌────────────────────────┐
-│                        │
-│     var_a = 6          │
-│                        │
-└────────────────────────┘
-```
+![image](/assets/img/getting_started_with_rust/02.png)
 
 If we add a method and then call it, there will be a change.
 
@@ -97,63 +61,10 @@ fn function_something(){
 
 When a method is called, a new scope is created. You can think of each new scope
 as a fresh sheet of paper being added to the top of the stack.
-
-```
-┌─────────────────────┐
-│                     │
-│  ┌──────────────────┴──────┐
-│  │                         │
-│  │  function_something()   │
-│  │                         │
-│  │  var_x = true           │
-│  │                         │
-│  │  var_y = 123            │
-│  │                         │
-│  │                         │
-│  │                         │
-│  │                         │
-│  │                         │
-│  │                         │
-└──┤                         │
-   │                         │
-   │                         │
-   │                         │
-   └─────────────────────────┘
-```
+![image](/assets/img/getting_started_with_rust/03.png)
 
 And the stack now looks like this:
-
-```
-┌────────────────────────┐
-│                        │
-│     var_y = 123        │
-│                        │
-└────────────────────────┘
-
-┌────────────────────────┐
-│                        │
-│     var_x = true       │
-│                        │
-└────────────────────────┘
-
-┌────────────────────────┐
-│                        │
-│     var_c = true       │
-│                        │
-└────────────────────────┘
-
-┌────────────────────────┐
-│                        │
-│     var_b = 7          │
-│                        │
-└────────────────────────┘
-
-┌────────────────────────┐
-│                        │
-│     var_a = 6          │
-│                        │
-└────────────────────────┘
-```
+![image](/assets/img/getting_started_with_rust/04.png)
 
 When a method is called, two new items are added to the stack memory to
 represent the method's arguments and local variables. However, as soon as we
@@ -161,48 +72,10 @@ exit the method's scope by reaching the closing curly brace, everything inside
 that scope is destroyed, including any values that were allocated on the stack
 such as x and y. These values are no longer considered alive and cannot be
 accessed or used after the scope has ended.
-
-
-```
-┌─────────────────────┐            ┌───────────┐           ┌───────────────┐
-│                     │            │           │           │               │
-│  Main()             │            │ function_s└──┐        └───┐omething() │
-│                     │            │              │            │           │
-│  var_a = 6          │            │ var_x = true │            │           │
-│                     │            │           ┌──┘         ┌──┘           │
-│  var_b = 7.0        │            │ var_y = 12│            │3             │
-│                     │            │           │            │              │
-│  var_c = true       │            │           └──┐         └──┐           │
-│                     │            │              │            │           │
-│                     │            │              │            │           │
-│                     │            │           ┌──┘          ┌─┘           │
-│                     │            │           │             │             │
-│                     │            │           └─┐           └─┐           │
-│                     │            │             │             │           │
-└─────────────────────┘            └─────────────┘             └───────────┘
-```
+![image](/assets/img/getting_started_with_rust/05.png)
 
 The stack now looks like this again.
-
-```
-┌────────────────────────┐
-│                        │
-│     var_c = true       │
-│                        │
-└────────────────────────┘
-
-┌────────────────────────┐
-│                        │
-│     var_b = 7          │
-│                        │
-└────────────────────────┘
-
-┌────────────────────────┐
-│                        │
-│     var_a = 6          │
-│                        │
-└────────────────────────┘
-```
+![image](/assets/img/getting_started_with_rust/06.png)
 
 It's worth noting that the compiler can preallocate memory for the stack since
 all items we assign to have a fixed size. For example, the value var_a is of
@@ -253,37 +126,7 @@ longer needed. If a heap-allocated value is not properly deallocated, it can
 lead to memory leaks or other issues. Rust's ownership and borrowing rules help
 to prevent these issues by ensuring that heap-allocated values are properly
 managed and deallocated when they are no longer needed.
-
-```
-┌───────────────────────────────────────┐         ┌─────────────────────────────────────────────────────────────────────────────┐
-│                                       │         │                                                                             │
-│   Stack                               │         │    Heap                                                                     │
-│                                       │         │                                                                             │
-│                                       │         │                                                                             │
-│                                       │         │                                                                             │
-│                                       │         │      ┌────────┐    ┌────────┐    ┌────────┐    ┌────────┐    ┌────────┐     │
-│                                       │         │      │        │    │        │    │        │    │        │    │        │     │
-│                                       │         │      │        │    │        │    │        │    │        │    │        │     │
-│     ┌────────────────────────┐        │         │      │   H    │    │   E    │    │   L    │    │   L    │    │   o    │     │
-│     │                        │        │         │      │        │    │        │    │        │    │        │    │        │     │
-│     │  var_b = [          ┌──┼────────┼─────────┼───►  │        │    │        │    │        │    │        │    │        │     │
-│     │         start : 0   │  │        │         │      │        │    │        │    │        │    │        │    │        │     │
-│     │         length: 5   │  │        │         │      └────────┘    └────────┘    └────────┘    └────────┘    └────────┘     │
-│     │         capacity : 5   │        │         │                                                                             │
-│     │         ]              │        │         │                                                                             │
-│     │                        │        │         │      ┌────────┐    ┌────────┐    ┌────────┐    ┌────────┐    ┌────────┐     │
-│     │                        │        │         │      │        │    │        │    │        │    │        │    │        │     │
-│     │                        │        │         │      │        │    │        │    │        │    │        │    │        │     │
-│     └────────────────────────┘        │         │      │        │    │        │    │        │    │        │    │        │     │
-│                                       │         │      │        │    │        │    │        │    │        │    │        │     │
-│     ┌────────────────────────┐        │         │      │        │    │        │    │        │    │        │    │        │     │
-│     │     var_a = 6          │        │         │      │        │    │        │    │        │    │        │    │        │     │
-│     │                        │        │         │      └────────┘    └────────┘    └────────┘    └────────┘    └────────┘     │
-│     └────────────────────────┘        │         │                                                                             │
-│                                       │         │                                                                             │
-│                                       │         │                                                                             │
-└───────────────────────────────────────┘         └─────────────────────────────────────────────────────────────────────────────┘
-```
+![image](/assets/img/getting_started_with_rust/07.png)
 
 As you can see, `var_b` now contains a pointer that references memory on the heap,
 along with metadata that specifies the length and capacity of the allocated
@@ -343,19 +186,7 @@ copy the value to a new value to the stack whenever possible. So now, we have 2
 values on the stack. `var_a` owns a value 6, and `var_b` also owns another value
 of 6.
 
-```
-┌────────────────────────┐
-│                        │
-│     var_b = 6          │
-│                        │
-└────────────────────────┘
-
-┌────────────────────────┐
-│                        │
-│     var_a = 6          │
-│                        │
-└────────────────────────┘
-```
+![image](/assets/img/getting_started_with_rust/08.png)
 
 This also applies when moving stack allocations to other scopes like a method
 call:
@@ -385,7 +216,7 @@ This is because a clone is made of `var_a`, and passed in to
 correlation between `var_a` and `val` in this case. Remember this copy action,
 we will see this later on some more.
 
-# A more complex example 
+# A more complex example
 
 So if we have the following example:
 
@@ -404,45 +235,9 @@ fn some_other_function() {
 ```
 
 Our stack and heap memory now looks like this:
+![image](/assets/img/getting_started_with_rust/09.png)
 
-```
-
-┌───────────────────────────────────────┐         ┌─────────────────────────────────────────────────────────────────────────────┐
-│                                       │         │                                                                             │
-│   Stack                               │         │    Heap                                                                     │
-│     ┌────────────────────────┐        │         │                                                                             │
-│     │                        │        │         │                                                                             │
-│     │  var_x = [             │        │         │                                                                             │
-│     │         start : 5      │        │         │                                                                             │
-│     │         length: 5      │        │         │                                                                             │
-│     │         capacity : 5   ├────────┼──────┐  │      ┌────────┐    ┌────────┐    ┌────────┐    ┌────────┐    ┌────────┐     │
-│     │         ]              │        │      │  │      │        │    │        │    │        │    │        │    │        │     │
-│     │                        │        │    ┌─┼──┼──────►        │    │        │    │        │    │        │    │        │     │
-│     │                        │        │    │ │  │      │   H    │    │   E    │    │   L    │    │   L    │    │   o    │     │
-│     │                        │        │    │ │  │      │        │    │        │    │        │    │        │    │        │     │
-│     └────────────────────────┘        │    │ │  │      │        │    │        │    │        │    │        │    │        │     │
-│                                       │    │ │  │      │        │    │        │    │        │    │        │    │        │     │
-│     ┌────────────────────────┐        │    │ │  │      └────────┘    └────────┘    └────────┘    └────────┘    └────────┘     │
-│     │                        │        │    │ │  │                                                                             │
-│     │  var_b = [             │        │    │ │  │                                                                             │
-│     │         start : 0      │        │    │ │  │      ┌────────┐    ┌────────┐    ┌────────┐    ┌────────┐    ┌────────┐     │
-│     │         length: 5      │        │    │ │  │      │        │    │        │    │        │    │        │    │        │     │
-│     │         capacity : 5   ├────────┼────┘ │  │      │        │    │        │    │        │    │        │    │        │     │
-│     │         ]              │        │      │  │      │   W    │    │   O    │    │   R    │    │   L    │    │   D    │     │
-│     │                        │        │      │  │      │        │    │        │    │        │    │        │    │        │     │
-│     │                        │        │      └──┼──────►        │    │        │    │        │    │        │    │        │     │
-│     │                        │        │         │      │        │    │        │    │        │    │        │    │        │     │
-│     └────────────────────────┘        │         │      └────────┘    └────────┘    └────────┘    └────────┘    └────────┘     │
-│                                       │         │                                                                             │
-│     ┌────────────────────────┐        │         │                                                                             │
-│     │     var_a = 6          │        │         │                                                                             │
-│     │                        │        │         │                                                                             │
-│     └────────────────────────┘        │         │                                                                             │
-│                                       │         │                                                                             │
-└───────────────────────────────────────┘         └─────────────────────────────────────────────────────────────────────────────┘
-```
-
-But as soon as we hit the end of the `some_other_function()` scope (at the curly braces), 
+But as soon as we hit the end of the `some_other_function()` scope (at the curly braces),
 
 ```rust
 fn main() {
@@ -479,7 +274,7 @@ fn some_other_function(input: String) {
 
 Nothing new here, right? As expected, the string 'Hello' will be printed to the console.
 
-However, something changed here. The ownership of the allocated memory moved from `var_b` to input. 
+However, something changed here. The ownership of the allocated memory moved from `var_b` to input.
 Let's see what happens if we try to use `var_b` after the `some_other_function()` call'.
 
 ```rust
@@ -547,7 +342,7 @@ We could do a couple of things here.
       some_other_function(var_b.clone());
       println!("{}", var_b);
   }
-  
+
   fn some_other_function(input: String) {
       println!("{}", input);
   }
@@ -566,7 +361,7 @@ We could do a couple of things here.
       var_b = some_other_function(var_b);
       println!("{}", var_b);
   }
-  
+
   fn some_other_function(input: String) -> String {
       println!("{}", input);
       input
@@ -792,7 +587,7 @@ fn main() {
     let longest = longest(string1.as_str(), string2.as_str());
     println!("{}", longest);
 }
-``` 
+```
 
 But lets say I want to do something different, let's say like this:
 ```rust
