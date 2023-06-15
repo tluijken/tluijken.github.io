@@ -26,4 +26,38 @@ of information. Navigating through the documentation became a challenge, and I
 struggled to take concrete actions. In this blog post, I will share my findings
 and experiences, aiming to assist those who may be facing similar hurdles.
 
-## The struggles
+## Struggles in Setting Up a Firewall for a Kubernetes Cluster
+
+In my initial attempt to set up a firewall for my Kubernetes cluster, I followed
+Microsoft's
+[article](https://learn.microsoft.com/en-us/azure/firewall/protect-azure-kubernetes-service)
+that described the use of a traditional firewall. I managed to successfully
+configure the traditional firewall and convert the provided scripts into a
+Terraform setup. Additionally, I implemented a [Hub and Spokes
+architecture](https://learn.microsoft.com/en-us/azure/architecture/reference-architectures/hybrid-networking/hub-spoke?tabs=cli)
+for improved network management.
+
+Nevertheless, I encountered difficulties when attempting to install an nginx
+ingress controller using a helm chart, primarily due to [routing
+issues](https://github.com/kubernetes/ingress-nginx/issues/7626#issuecomment-944053390).
+Surprisingly, the initial Microsoft article did not mention the need to set up
+an nginx ingress controller; it only referred to a load balancer service that
+directed traffic directly to a single deployment or replica set.
+
+I explored other [useful
+resources](https://denniszielke.medium.com/fully-private-aks-clusters-without-any-public-ips-finally-7f5688411184)
+in an attempt to find a solution, but unfortunately, I faced the same recurring
+issues. It became evident that my knowledge of networking was insufficient to
+resolve these challenges.
+
+Feeling stranded, I reached out to my network for support and sought advice from
+DevOps engineers on how they typically secure their Kubernetes clusters. Through
+these discussions, I quickly learned that an Application Gateway Ingress
+Controller with a Web Application Firewall would be a more suitable solution for
+my needs. The Web Application Firewall offers valuable features such as packet
+inspection and bot detection, making it better suited to protect my services
+from malicious requests.
+
+With a sense of relief, I decided to leverage the Application Gateway Ingress
+Controller along with the Web Application Firewall to enhance the security of my
+Kubernetes cluster.
