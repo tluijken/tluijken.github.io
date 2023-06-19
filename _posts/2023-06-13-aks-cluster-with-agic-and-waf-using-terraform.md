@@ -4,7 +4,7 @@ author: Thomas Luijken
 date: 2023-06-13 21:35:00 +0200
 categories: [Azure, DevOps, Infrastructure As Code, Terraform]
 tags: [DevOps, Azure, Aks, Kubernetes, Terraform, Let's Encrypt, Firewall]
-hidden: true;
+hidden: true
 ---
 
 In today's microservice-oriented era, backend developers often find themselves
@@ -61,3 +61,13 @@ from malicious requests.
 With a sense of relief, I decided to leverage the Application Gateway Ingress
 Controller along with the Web Application Firewall to enhance the security of my
 Kubernetes cluster.
+
+## Setting up a Application Gateway Ingress Controller and Web Application Firewall.
+
+Initially I just enabled the Application Gateway Ingress Controller by checking
+the checkbox under 'Network'. After that I also enabled the Web Application
+Firewall through the Azure Portal. So far, super easy setup. However, I found
+myself searching for answers when setting up the 'Backend pools', 'SSL
+settings', 'Listeners and Rules'. How does this translate to traffic into my
+cluster?
+
