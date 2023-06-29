@@ -464,17 +464,12 @@ resource "azurerm_application_gateway" "aks-appgw-demo" {
 ```
 
 ### AKS Cluster
-With the Network, Web Application Firewall and Application Gateway in place, we
-can now finally add the AKS cluster to our terraform configuration.
+With the Network, Web Application Firewall, and Application Gateway in place, I can finally add the AKS cluster to my terraform configuration.
 
-This configuration is very basic, but has some notable settings:
-* `node_resource_group` - the name we want to give to the resource group Azure
-  will create for the aks resources. It's personal preference, but I want to
-  have control over this.
-* `default_node_pool` > `vnet_subnet_id` - here we assign our preconfigured subnet
-  to the aks-cluster node pool.
-* `ingress_application_gateway` - this is where we bind our application gateway
-  to our aks cluster
+This configuration is quite basic, but there are some important settings to note:
+* `node_resource_group` - the name I want to assign to the resource group that Azure will create for the AKS resources. This is a personal preference, but I want to have control over this.
+* `default_node_pool` > `vnet_subnet_id` - here, I assign our preconfigured subnet to the AKS-cluster node pool.
+* `ingress_application_gateway` - this is where I connect the Application Gateway to the AKS cluster.
 
 ```terraform
 resource "azurerm_kubernetes_cluster" "aks" {
@@ -492,7 +487,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
     node_count      = 2
     vm_size         = "Standard_DS2_v2"
     os_disk_size_gb = 30
-    # the aks cluster can be deployed into the existing virtual network.
+    # Deploy the AKS cluster into the existing virtual network.
     vnet_subnet_id = azurerm_subnet.aks.id
   }
 
@@ -501,10 +496,8 @@ resource "azurerm_kubernetes_cluster" "aks" {
   }
 
   ingress_application_gateway {
-    # bind our aks cluster to the gateway
+    # Connect the AKS cluster to the gateway
     gateway_id = azurerm_application_gateway.aks-appgw-demo.id
   }
 }
 ```
-
-
