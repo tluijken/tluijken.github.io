@@ -259,7 +259,7 @@ configure, except for the ones automatically created for the AKS cluster by
 Azure itself.
 
 ```terraform
-resource "azurerm_resource_group" "aks-appgw-demo" {
+resource "azurerm_resource_group" "aks_appgw_demo" {
   name     = "aks-appgw-demo-rg"
   location = "westeurope"
 }
@@ -271,11 +271,11 @@ With the resource group established, the next step was to set up the Web
 Application Firewall Policy:
 
 ```terraform
-resource "azurerm_web_application_firewall_policy" "aks-appgw-demo" {
+resource "azurerm_web_application_firewall_policy" "aks_appgw_demo" {
   name                = "web-application-firewall"
-  location            = azurerm_resource_group.aks-appgw-demo.location
-  resource_group_name = azurerm_resource_group.aks-appgw-demo.name
-  depends_on          = [azurerm_resource_group.aks-appgw-demo]
+  location            = azurerm_resource_group.aks_appgw_demo.location
+  resource_group_name = azurerm_resource_group.aks_appgw_demo.name
+  depends_on          = [azurerm_resource_group.aks_appgw_demo]
 
   policy_settings {
     enabled                     = true
@@ -320,26 +320,27 @@ locals {
 Next came the implementation of my network configuration.
 
 ```terraform
-resource "azurerm_virtual_network" "aks-gw-vnet" {
-  name                = "AksVnet"
-  location            = azurerm_resource_group.aks-appgw-demo.location
-  resource_group_name = azurerm_resource_group.aks-appgw-demo.name
-  depends_on          = [azurerm_resource_group.aks-appgw-demo]
+resource "azurerm_virtual_network" "aks_gw_vnet" {
+  name                = "aks-appgw-vnet"
+  location            = azurerm_resource_group.aks_appgw_demo.location
+  resource_group_name = azurerm_resource_group.aks_appgw_demo.name
+  depends_on          = [azurerm_resource_group.aks_appgw_demo]
   address_space       = [local.vnet_address_space]
 }
+
 resource "azurerm_subnet" "aks" {
   name                 = "aks-subnet"
-  resource_group_name  = azurerm_resource_group.aks-appgw-demo.name
-  depends_on           = [azurerm_resource_group.aks-appgw-demo, azurerm_virtual_network.aks-gw-vnet]
-  virtual_network_name = azurerm_virtual_network.aks-gw-vnet.name
+  resource_group_name  = azurerm_resource_group.aks_appgw_demo.name
+  depends_on           = [azurerm_resource_group.aks_appgw_demo, azurerm_virtual_network.aks_gw_vnet]
+  virtual_network_name = azurerm_virtual_network.aks_gw_vnet.name
   address_prefixes     = [local.aks_subnet_address_prefix]
 }
 
 resource "azurerm_subnet" "application_gateway" {
   name                 = "ingress-appgateway-subnet"
-  resource_group_name  = azurerm_resource_group.aks-appgw-demo.name
-  depends_on           = [azurerm_resource_group.aks-appgw-demo, azurerm_virtual_network.aks-gw-vnet]
-  virtual_network_name = azurerm_virtual_network.aks-gw-vnet.name
+  resource_group_name  = azurerm_resource_group.aks_appgw_demo.name
+  depends_on           = [azurerm_resource_group.aks_appgw_demo, azurerm_virtual_network.aks_gw_vnet]
+  virtual_network_name = azurerm_virtual_network.aks_gw_vnet.name
   address_prefixes     = [local.appgw_subnet_address_prefix]
 }
 ```
@@ -347,11 +348,11 @@ resource "azurerm_subnet" "application_gateway" {
 Additionally, I needed a public IP address to assign as the public IP address for the Application Gateway.
 
 ```terraform
-resource "azurerm_public_ip" "aks_appgw-demo" {
+resource "azurerm_public_ip" "aks_appgw_demo" {
   name                = "appgw_public_ip"
-  location            = azurerm_resource_group.aks-appgw-demo.location
-  resource_group_name = azurerm_resource_group.aks-appgw-demo.name
-  depends_on          = [azurerm_resource_group.aks-appgw-demo]
+  location            = azurerm_resource_group.aks_appgw_demo.location
+  resource_group_name = azurerm_resource_group.aks_appgw_demo.name
+  depends_on          = [azurerm_resource_group.aks_appgw_demo]
   allocation_method   = "Static"
   sku                 = "Standard"
 }
@@ -372,12 +373,12 @@ configuration. To avoid this, I included some filters for 'lifecycle
 management'.
 
 ```terraform
-resource "azurerm_application_gateway" "aks-appgw-demo" {
+resource "azurerm_application_gateway" "aks_appgw_demo" {
   name                = "application-gateway"
-  location            = azurerm_resource_group.aks-appgw-demo.location
-  resource_group_name = azurerm_resource_group.aks-appgw-demo.name
-  depends_on          = [azurerm_resource_group.aks-appgw-demo, azurerm_web_application_firewall_policy.aks-appgw-demo, azurerm_subnet.application_gateway, azurerm_public_ip.aks_appgw-demo]
-  firewall_policy_id  = azurerm_web_application_firewall_policy.aks-appgw-demo.id
+  location            = azurerm_resource_group.aks_appgw_demo.location
+  resource_group_name = azurerm_resource_group.aks_appgw_demo.name
+  depends_on          = [azurerm_resource_group.aks_appgw_demo, azurerm_web_application_firewall_policy.aks_appgw_demo, azurerm_subnet.application_gateway, azurerm_public_ip.aks_appgw_demo]
+  firewall_policy_id  = azurerm_web_application_firewall_policy.aks_appgw_demo.id
 
   sku {
     name     = "WAF_v2"
@@ -390,6 +391,7 @@ resource "azurerm_application_gateway" "aks-appgw-demo" {
     subnet_id = azurerm_subnet.application_gateway.id
   }
 
+
   frontend_port {
     name = "port_80"
     port = 80
@@ -397,8 +399,8 @@ resource "azurerm_application_gateway" "aks-appgw-demo" {
 
   # Assign the public IP to the application gateway
   frontend_ip_configuration {
-    name                 = "AppGwPublicFrontendIp"
-    public_ip_address_id = azurerm_public_ip.aks_appgw-demo.id
+    name                 = "PublicFrontendIp"
+    public_ip_address_id = azurerm_public_ip.aks_appgw_demo.id
   }
 
   frontend_ip_configuration {
@@ -474,20 +476,20 @@ This configuration is quite basic, but there are some important settings to note
 ```terraform
 resource "azurerm_kubernetes_cluster" "aks" {
   name                = "app_gw_demo"
-  location            = azurerm_resource_group.aks-appgw-demo.location
-  resource_group_name = azurerm_resource_group.aks-appgw-demo.name
-  depends_on          = [azurerm_resource_group.aks-appgw-demo, azurerm_application_gateway.aks-appgw-demo]
+  location            = azurerm_resource_group.aks_appgw_demo.location
+  resource_group_name = azurerm_resource_group.aks_appgw_demo.name
+  depends_on          = [azurerm_resource_group.aks_appgw_demo, azurerm_application_gateway.aks_appgw_demo]
   dns_prefix          = "aks-appgw-demo"
 
   role_based_access_control_enabled = true
-  node_resource_group               = "${azurerm_resource_group.aks-appgw-demo.name}-aks-nodes"
+  node_resource_group               = "${azurerm_resource_group.aks_appgw_demo.name}-aks-nodes"
 
   default_node_pool {
     name            = "default"
     node_count      = 2
     vm_size         = "Standard_DS2_v2"
     os_disk_size_gb = 30
-    # Deploy the AKS cluster into the existing virtual network.
+    # the aks cluster can be deployed into the existing virtual network.
     vnet_subnet_id = azurerm_subnet.aks.id
   }
 
@@ -496,8 +498,8 @@ resource "azurerm_kubernetes_cluster" "aks" {
   }
 
   ingress_application_gateway {
-    # Connect the AKS cluster to the gateway
-    gateway_id = azurerm_application_gateway.aks-appgw-demo.id
+    # bind our aks cluster to the gateway
+    gateway_id = azurerm_application_gateway.aks_appgw_demo.id
   }
 }
 ```
