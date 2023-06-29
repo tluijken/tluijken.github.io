@@ -26,6 +26,8 @@ of information. Navigating through the documentation became a challenge, and I
 struggled to take concrete actions. In this blog post, I will share my findings
 and experiences, aiming to assist those who may be facing similar hurdles.
 
+All source code can be found in my [GitHub Repository](https://github.com/tluijken/terraform_aks_example).
+
 ## Struggles in Setting Up a Firewall for a Kubernetes Cluster
 
 In my initial attempt to set up a firewall for my Kubernetes cluster, I followed
@@ -187,14 +189,15 @@ resource "azurerm_application_gateway" "network" {
 ```
 ...But perhaps not.
 
-## The missing link:
-I kept digging through [the
+## The Hidden Key
+Despite extensive digging through [the
 documentation](https://learn.microsoft.com/en-us/azure/application-gateway/tutorial-ingress-controller-add-on-new),
-but I couldn't find what I was missing.
+the elusive piece of the puzzle was yet to be found.
 
-What was essential to get this properly working was to have the
-'ingress-appgw-deployment' pod do all the heavy lifting for us, and use the
-ingress controller configurations as usual, with a small change:
+The eureka moment arrived when I delved deeper into Microsoft's provided ingress
+configuration. I discovered a tiny discrepancy that would pave the path to
+success.
+
 ```yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -214,9 +217,294 @@ spec:
               number: 80
         pathType: Exact
 ```
-The ingress.class annotation is essential here:
-`    kubernetes.io/ingress.class: azure/application-gateway`
+Crucial in this context is the ingress.class annotation:
+`kubernetes.io/ingress.class: azure/application-gateway`.
 
+As I dived deeper, I observed a pod named 'ingress-appgw-deployment-****'
+running in the cluster.
 
+```bash
+$ kubectl get pods -n kube-system
+NAME                                       READY   STATUS    RESTARTS   AGE
+....
+ingress-appgw-deployment-85c4dc479-fc6l6   1/1     Running   0          5d20h
+...
+```
+This 'ingress-appgw-deployment' is integrated into the Kubernetes cluster
+post-activation of the Application Gateway feature. It effectively manages the
+heavy lifting. Depending on the ingress configurations and the
+`azure/application-gateway` ingress class, it automates the setup of routing,
+backend pools, listeners, and more in the Application Gateway configuration.
+
+With everything now set up correctly, I found myself capable of configuring a
+Web Application Firewall, tied to the Application Gateway Ingress Controller.
+
+## Shifting to Terraform
+
+As I sought to configure all elements via Terraform, including firewall rules,
+the path forward was not as straightforward as simply enabling the [Application
+Gateway Ingress
+Controller](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/kubernetes_cluster#ingress_application_gateway)
+in the AKS cluster node. Given my intention to integrate the Application
+Controller with the Web Application Firewall, I was required to first configure
+the Web Application Firewall and Application Gateway and then bind them. This
+process inevitably led me to manually set up the VNET/Subnets in Terraform.
+Thankfully, my prior experience with the classic Firewall had instilled in me a
+strong understanding of networking.
+
+### Resource Group
+
+I began by creating a resource group, which would house all the resources to
+configure, except for the ones automatically created for the AKS cluster by
+Azure itself.
+
+```terraform
+resource "azurerm_resource_group" "aks-appgw-demo" {
+  name     = "aks-appgw-demo-rg"
+  location = "westeurope"
+}
+```
+
+### Web Application Firewall
+
+With the resource group established, the next step was to set up the Web
+Application Firewall Policy:
+
+```terraform
+resource "azurerm_web_application_firewall_policy" "aks-appgw-demo" {
+  name                = "web-application-firewall"
+  location            = azurerm_resource_group.aks-appgw-demo.location
+  resource_group_name = azurerm_resource_group.aks-appgw-demo.name
+  depends_on          = [azurerm_resource_group.aks-appgw-demo]
+
+  policy_settings {
+    enabled                     = true
+    file_upload_limit_in_mb     = 100
+    max_request_body_size_in_kb = 128
+    mode                        = "Detection"
+    request_body_check          = true
+  }
+
+  managed_rules {
+    managed_rule_set {
+      type    = "OWASP"
+      version = "3.2"
+    }
+
+    managed_rule_set {
+      type    = "Microsoft_BotManagerRuleSet"
+      version = "1.0"
+    }
+  }
+}
+```
+This basic configuration defines rudimentary rules for a Web Application
+Firewall, including OWASP rules and Bot Detection Rules.
+
+### Networking
+
+Before the Application Gateway can be established, I had to manage some
+networking prerequisites. These subnets would eventually be allocated to the
+Application Gateway resource and the AKS cluster. To simplify modifications, I
+created some local values.
+
+```terraform
+locals {
+  vnet_address_space          = "10.224.0.0/15" # Ranges 10.224.0.1 till 10.225.255.254
+  aks_subnet_address_prefix   = "10.224.0.0/16" # Ranges 10.224.0.1 till 10.224.255.254
+  appgw_subnet_address_prefix = "10.225.0.0/16" # Ranges 10.225.0.1 till 10.225.255.254
+  appgw_private_ip_address    = "10.225.0.100"  # Should reside in the appgw-subnet range
+}
+```
+
+Next came the implementation of my network configuration.
+
+```terraform
+resource "azurerm_virtual_network" "aks-gw-vnet" {
+  name                = "AksVnet"
+  location            = azurerm_resource_group.aks-appgw-demo.location
+  resource_group_name = azurerm_resource_group.aks-appgw-demo.name
+  depends_on          = [azurerm_resource_group.aks-appgw-demo]
+  address_space       = [local.vnet_address_space]
+}
+resource "azurerm_subnet" "aks" {
+  name                 = "aks-subnet"
+  resource_group_name  = azurerm_resource_group.aks-appgw-demo.name
+  depends_on           = [azurerm_resource_group.aks-appgw-demo, azurerm_virtual_network.aks-gw-vnet]
+  virtual_network_name = azurerm_virtual_network.aks-gw-vnet.name
+  address_prefixes     = [local.aks_subnet_address_prefix]
+}
+
+resource "azurerm_subnet" "application_gateway" {
+  name                 = "ingress-appgateway-subnet"
+  resource_group_name  = azurerm_resource_group.aks-appgw-demo.name
+  depends_on           = [azurerm_resource_group.aks-appgw-demo, azurerm_virtual_network.aks-gw-vnet]
+  virtual_network_name = azurerm_virtual_network.aks-gw-vnet.name
+  address_prefixes     = [local.appgw_subnet_address_prefix]
+}
+```
+
+Additionally, I needed a public IP address to assign as the public IP address for the Application Gateway.
+
+```terraform
+resource "azurerm_public_ip" "aks_appgw-demo" {
+  name                = "appgw_public_ip"
+  location            = azurerm_resource_group.aks-appgw-demo.location
+  resource_group_name = azurerm_resource_group.aks-appgw-demo.name
+  depends_on          = [azurerm_resource_group.aks-appgw-demo]
+  allocation_method   = "Static"
+  sku                 = "Standard"
+}
+```
+### Application Gateway
+Finally, I was ready to set up an Application Gateway. However, this part
+introduced some confusion. I was required to define at least one `backend_pool`,
+`http_backend_settings`, `http_listener`, and `request_routing_rule`. These
+requirements seemed nonsensical since they would be replaced by my `app-gw` pod
+during the synchronization process.
+
+I filled them with placeholder data, knowing that they would be deleted and
+replaced with relevant configurations later. This brought up another issue: once
+the `app-gw` pod starts setting configurations to the Application Gateway, the
+configuration no longer matches my state file. Running `terraform apply` at that
+point would result in recreating the resource, reverting back to my placeholder
+configuration. To avoid this, I included some filters for 'lifecycle
+management'.
+
+```terraform
+resource "azurerm_application_gateway" "aks-appgw-demo" {
+  name                = "application-gateway"
+  location            = azurerm_resource_group.aks-appgw-demo.location
+  resource_group_name = azurerm_resource_group.aks-appgw-demo.name
+  depends_on          = [azurerm_resource_group.aks-appgw-demo, azurerm_web_application_firewall_policy.aks-appgw-demo, azurerm_subnet.application_gateway, azurerm_public_ip.aks_appgw-demo]
+  firewall_policy_id  = azurerm_web_application_firewall_policy.aks-appgw-demo.id
+
+  sku {
+    name     = "WAF_v2"
+    tier     = "WAF_v2"
+    capacity = 2
+  }
+
+  gateway_ip_configuration {
+    name      = "gateway-ip-configuration"
+    subnet_id = azurerm_subnet.application_gateway.id
+  }
+
+  frontend_port {
+    name = "port_80"
+    port = 80
+  }
+
+  # Assign the public IP to the application gateway
+  frontend_ip_configuration {
+    name                 = "AppGwPublicFrontendIp"
+    public_ip_address_id = azurerm_public_ip.aks_appgw-demo.id
+  }
+
+  frontend_ip_configuration {
+    name                          = "PrivateFrontendIp"
+    private_ip_address            = local.appgw_private_ip_address
+    private_ip_address_allocation = "Static"
+    subnet_id                     = azurerm_subnet.application_gateway.id
+  }
+
+  # Initial placeholder configuration for backend, listeners, rules.
+  # These are required for setting up the application gateway.
+  # In the aks cluster, a synchronization pod will be created,
+  # which will update the application gateway's
+  # listeners, back-ends, and rules in line with the ingress configuration.
+  # This will eventually remove the placeholder items created here.
+  backend_address_pool {
+    name = "dummyBackend"
+  }
+
+  backend_http_settings {
+    name                  = "dummyBackendSettings"
+    cookie_based_affinity = "Disabled"
+    path                  = "/path1/"
+    port                  = 80
+    protocol              = "Http"
+    request_timeout       = 60
+  }
+
+  http_listener {
+    name                           = "dummyListener"
+    frontend_ip_configuration_name = "PrivateFrontendIp"
+    frontend_port_name             = "port_80"
+    protocol                       = "Http"
+  }
+
+  request_routing_rule {
+    name                       = "dummyRule"
+    rule_type                  = "Basic"
+    http_listener_name         = "dummyListener"
+    backend_address_pool_name  = "dummyBackend"
+    backend_http_settings_name = "dummyBackendSettings"
+    priority                   = 100
+  }
+
+  # Since the rules, listeners, and backends are dynamically updated at runtime
+  # by the application gateway pod, based on the ingress configuration, I've chosen
+  # to ignore these changes for lifecycle management.
+  lifecycle {
+    ignore_changes = [
+      backend_address_pool,
+      http_listener,
+      backend_http_settings,
+      request_routing_rule,
+      probe,
+      redirect_configuration,
+      url_path_map,
+      ssl_certificate,
+      frontend_port,
+      tags
+    ]
+  }
+}
+```
+
+### AKS Cluster
+With the Network, Web Application Firewall and Application Gateway in place, we
+can now finally add the AKS cluster to our terraform configuration.
+
+This configuration is very basic, but has some notable settings:
+* `node_resource_group` - the name we want to give to the resource group Azure
+  will create for the aks resources. It's personal preference, but I want to
+  have control over this.
+* `default_node_pool` > `vnet_subnet_id` - here we assign our preconfigured subnet
+  to the aks-cluster node pool.
+* `ingress_application_gateway` - this is where we bind our application gateway
+  to our aks cluster
+
+```terraform
+resource "azurerm_kubernetes_cluster" "aks" {
+  name                = "app_gw_demo"
+  location            = azurerm_resource_group.aks-appgw-demo.location
+  resource_group_name = azurerm_resource_group.aks-appgw-demo.name
+  depends_on          = [azurerm_resource_group.aks-appgw-demo, azurerm_application_gateway.aks-appgw-demo]
+  dns_prefix          = "aks-appgw-demo"
+
+  role_based_access_control_enabled = true
+  node_resource_group               = "${azurerm_resource_group.aks-appgw-demo.name}-aks-nodes"
+
+  default_node_pool {
+    name            = "default"
+    node_count      = 2
+    vm_size         = "Standard_DS2_v2"
+    os_disk_size_gb = 30
+    # the aks cluster can be deployed into the existing virtual network.
+    vnet_subnet_id = azurerm_subnet.aks.id
+  }
+
+  identity {
+    type = "SystemAssigned"
+  }
+
+  ingress_application_gateway {
+    # bind our aks cluster to the gateway
+    gateway_id = azurerm_application_gateway.aks-appgw-demo.id
+  }
+}
+```
 
 
