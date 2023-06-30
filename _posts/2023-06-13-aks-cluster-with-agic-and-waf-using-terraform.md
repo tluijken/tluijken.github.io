@@ -30,7 +30,7 @@ All source code can be found in my [GitHub Repository](https://github.com/tluijk
 
 ## Struggles in Setting Up a Firewall for a Kubernetes Cluster
 
-In my initial attempt to set up a firewall for my Kubernetes cluster, I followed
+In my initial attempt to set up a firewall for a Kubernetes cluster, I followed
 Microsoft's
 [article](https://learn.microsoft.com/en-us/azure/firewall/protect-azure-kubernetes-service)
 that described the use of a traditional firewall. I managed to successfully
@@ -60,11 +60,11 @@ with a [Web Application
 Firewall](https://learn.microsoft.com/en-us/azure/web-application-firewall/ag/ag-overview)
 would be a more suitable solution for my needs. The Web Application Firewall
 offers valuable features such as packet inspection and bot detection, making it
-better suited to protect my services from malicious requests.
+better suited to protect services from malicious requests.
 
 With a sense of relief, I decided to leverage the Application Gateway Ingress
-Controller along with the Web Application Firewall to enhance the security of my
-Kubernetes cluster.
+Controller along with the Web Application Firewall to enhance the security of
+the Kubernetes cluster.
 
 ## Setting up a Application Gateway Ingress Controller and Web Application Firewall.
 
@@ -72,7 +72,7 @@ Initially I just enabled the Application Gateway Ingress Controller by checking
 the checkbox under 'Network'. After that I also enabled the Web Application
 Firewall through the Azure Portal. So far, super easy setup. However, I found
 myself searching for answers when setting up the 'Backend pools', 'SSL
-settings', 'Listeners and Rules'. How does this translate to traffic into my
+settings', 'Listeners and Rules'. How does this translate to traffic into the
 cluster? So many options to review:
 ![image](../assets/img/agic_terraform/backend_setting.png)
 ![image](../assets/img/agic_terraform/routing.rules.png)
@@ -317,7 +317,22 @@ locals {
 }
 ```
 
-Next came the implementation of my network configuration.
+> **Note:** The virtual network's address space is meticulously defined to
+> prevent overlaps and confusion, especially when operating multiple clusters
+> such as DEV, STAGING, and PRODUCTION. I recommend sticking with recognizable
+> IP ranges for each environment, as illustrated below:
+>
+> - DEV: 10.224.0.0/15 (IP range: 10.224.0.1 to 10.225.255.254)
+> - STAGING: 10.226.0.0/15 (IP range: 10.226.0.1 to 10.227.255.254)
+> - PRODUCTION: 10.228.0.0/15 (IP range: 10.228.0.1 to 10.229.255.254)
+>
+> This structure not only ensures clarity but also proves beneficial if you wish
+> to incorporate a Jumpbox (HUB VNET) into your Azure environment. By peering
+> the virtual networks of the AKS clusters with the HUB VNET, you can guarantee
+> no overlapping address spaces, thus making it intuitively understandable for
+> most engineers.
+
+Next came the implementation of the network configuration.
 
 ```terraform
 resource "azurerm_virtual_network" "aks_gw_vnet" {
@@ -361,14 +376,14 @@ resource "azurerm_public_ip" "aks_appgw_demo" {
 Finally, I was ready to set up an Application Gateway. However, this part
 introduced some confusion. I was required to define at least one `backend_pool`,
 `http_backend_settings`, `http_listener`, and `request_routing_rule`. These
-requirements seemed nonsensical since they would be replaced by my `app-gw` pod
+requirements seemed nonsensical since they would be replaced by the `app-gw` pod
 during the synchronization process.
 
 I filled them with placeholder data, knowing that they would be deleted and
 replaced with relevant configurations later. This brought up another issue: once
 the `app-gw` pod starts setting configurations to the Application Gateway, the
-configuration no longer matches my state file. Running `terraform apply` at that
-point would result in recreating the resource, reverting back to my placeholder
+configuration no longer matches the state file. Running `terraform apply` at that
+point would result in recreating the resource, reverting back to the placeholder
 configuration. To avoid this, I included some filters for 'lifecycle
 management'.
 
@@ -466,7 +481,7 @@ resource "azurerm_application_gateway" "aks_appgw_demo" {
 ```
 
 ### AKS Cluster
-With the Network, Web Application Firewall, and Application Gateway in place, I can finally add the AKS cluster to my terraform configuration.
+With the Network, Web Application Firewall, and Application Gateway in place, I can finally add the AKS cluster to the terraform configuration.
 
 This configuration is quite basic, but there are some important settings to note:
 * `node_resource_group` - the name I want to assign to the resource group that Azure will create for the AKS resources. This is a personal preference, but I want to have control over this.
@@ -503,3 +518,200 @@ resource "azurerm_kubernetes_cluster" "aks" {
   }
 }
 ```
+# Deploying apps
+Before we can deploy applications, we must configure the Kubernetes provider.
+This provider draws its kube configuration from the
+`azurerm_kubernetes_cluster.aks` resource, which becomes available
+post-creation. Although my standard recommendation would be to utilize a
+[Multi-Layer
+Architecture](https://www.padok.fr/en/blog/terraform-iac-multi-layering) for
+this type of setup, for demonstration purposes, I have achieved the desired
+outcome using an intermediary data block.
+
+```terraform
+# Temporary solution for the multi-layer architecture, utilized solely for demonstration
+data "azurerm_kubernetes_cluster" "cluster" {
+  name                = azurerm_kubernetes_cluster.aks.name
+  resource_group_name = azurerm_kubernetes_cluster.aks.resource_group_name
+  depends_on = [ azurerm_kubernetes_cluster.aks ]
+}
+
+provider "kubernetes" {
+  host                   = data.azurerm_kubernetes_cluster.cluster.kube_config[0].host
+  client_certificate     = base64decode(data.azurerm_kubernetes_cluster.cluster.kube_config[0].client_certificate)
+  client_key             = base64decode(data.azurerm_kubernetes_cluster.cluster.kube_config[0].client_key)
+  cluster_ca_certificate = base64decode(data.azurerm_kubernetes_cluster.cluster.kube_config[0].cluster_ca_certificate)
+}
+```
+
+This Kubernetes provider can now be leveraged to deploy our applications to the
+AKS cluster.
+
+```terraform
+resource "kubernetes_deployment_v1" "hello_world" {
+  depends_on = [ azurerm_kubernetes_cluster.aks ]
+  metadata {
+    name = "aks-hello-world"
+  }
+  spec {
+    replicas = 1
+    selector {
+      match_labels = {
+        app = "aks-hello-world"
+      }
+    }
+    template {
+      metadata {
+        labels = {
+          app = "aks-hello-world"
+        }
+      }
+      spec {
+        container {
+          image             = "mcr.microsoft.com/azuredocs/aks-helloworld:v1"
+          name              = "aks-hello-world"
+          image_pull_policy = "Always"
+          port {
+            container_port = 80
+          }
+          env {
+            name  = "TITLE"
+            value = "Welcome to Azure Kubernetes Service (AKS)"
+          }
+        }
+      }
+    }
+  }
+}
+resource "kubernetes_service_v1" "hello_world" {
+  metadata {
+    name = "aks-hello-world"
+  }
+  spec {
+    selector = {
+      app = kubernetes_deployment_v1.hello_world.spec[0].template[0].metadata[0].labels.app
+    }
+    type = "NodePort"
+    port {
+      port        = 80
+      target_port = 80
+    }
+  }
+}
+```
+
+One aspect I appreciate about using Terraform in this scenario is the ability to
+derive certain values, such as the app selector, from other resources. It
+supports auto-completion and permits derivation of dependencies, ensuring a
+controlled deployment and creation of services within the cluster.
+
+At this point, we have a sample application successfully deployed to the AKS
+cluster.
+
+```bash
+$ kubectl get all -n default
+NAME                                   READY   STATUS    RESTARTS   AGE
+pod/aks-hello-world-8485768b75-vdbpx   1/1     Running   0          11m
+
+NAME                      TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)        AGE
+service/aks-hello-world   NodePort    10.0.50.9    <none>        80:31330/TCP   11m
+
+NAME                              READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/aks-hello-world   1/1     1            1           11m
+
+NAME                                         DESIRED   CURRENT   READY   AGE
+replicaset.apps/aks-hello-world-8485768b75   1         1         1       11m
+```
+
+## Configuring the Application Gateway Ingress Controller
+With the deployment now fully established, we can proceed to set up our Ingress
+Controller. Don't forget to utilize the `azure/application-gateway` ingress
+class, enabling the `app_gw` deployment to configure our Application Gateway
+accordingly.
+
+```terraform
+resource "kubernetes_ingress_v1" "hello-world" {
+  metadata {
+    name = "hello-world-ingress"
+    annotations = {
+      "kubernetes.io/ingress.class"              = "azure/application-gateway"
+    }
+  }
+
+  spec {
+    rule {
+      http {
+        path {
+          backend {
+            service {
+              name = kubernetes_service_v1.hello_world.metadata[0].name
+              port {
+                number = 80
+              }
+            }
+          }
+          path = "/"
+        }
+      }
+    }
+  }
+}
+```
+This configuration will guide the Ingress Controller to correctly direct
+incoming requests.
+
+## Access denied!
+
+After applying the ingress configuration, I was unable to see the content served
+by the `aks-hello-world` pod. Moreover, there seemed to be no changes made to my
+Application Gateway configuration.
+
+Upon investigating the `ingress_appgw_deployment` pod, I discovered an error:
+
+```bash
+E0630 10:16:30.128059       1 client.go:175] Code="ErrorApplicationGatewayForbidden" Message="Unexpected status code '403' while performing a GET on Application Gateway. You can use 'az role assignment create --role Reader --scope /subscriptions/*******/resourceGroups/aks-appgw-demo-rg --assignee ********; az role assignment create --role Contributor --scope /subscriptions/*********/resourceGroups/aks-appgw-demo-rg/providers/Microsoft.Network/applicationGateways/application-gateway --assignee ***********' to assign permissions. AGIC Identity needs at least 'Contributor' access to Application Gateway 'application-gateway' and 'Reader' access to Application Gateway's Resource Group 'aks-appgw-demo-rg'." InnerError="network.ApplicationGatewaysClient#Get: Failure responding to request: StatusCode=403 -- Original Error: autorest/azure: Service returned an error. Status=403 Code="AuthorizationFailed" Message="The client '*******************' with object id '***************' does not have authorization to perform action 'Microsoft.Network/applicationGateways/read' over scope '/subscriptions/******************/resourceGroups/aks-appgw-demo-rg/providers/Microsoft.Network/applicationGateways/application-gateway' or the scope is invalid. If access was recently granted, please refresh your credentials.""
+```
+
+To resolve this issue, we need to verify that our `System Assigned Identity` has
+the necessary permissions to read and write to the Application Gateway
+Configuration.
+
+We can rectify this issue by setting the proper roles:
+
+```terraform
+data "azurerm_user_assigned_identity" "aks_agw_uid" {
+  resource_group_name = azurerm_kubernetes_cluster.aks.node_resource_group
+  name                = "ingressapplicationgateway-${azurerm_kubernetes_cluster.aks.name}"
+  depends_on          = [azurerm_kubernetes_cluster.aks]
+}
+
+# The application gateway identity should have the Contributor role for the application gateway.
+resource "azurerm_role_assignment" "app_gw_contributor" {
+  principal_id                     = data.azurerm_user_assigned_identity.aks_agw_uid.principal_id
+  role_definition_name             = "Contributor"
+  scope                            = azurerm_application_gateway.aks_appgw_demo.id
+  skip_service_principal_aad_check = true
+  depends_on                       = [data.azurerm_user_assigned_identity.aks_agw_uid]
+}
+
+# Make sure the application gateway is able to make changes to the network
+resource "azurerm_role_assignment" "network_contributor" {
+  principal_id                     = data.azurerm_user_assigned_identity.aks_agw_uid.principal_id
+  role_definition_name             = "Network Contributor"
+  scope                            = azurerm_resource_group.aks_appgw_demo.id
+  skip_service_principal_aad_check = true
+  depends_on                       = [data.azurerm_user_assigned_identity.aks_agw_uid]
+}
+
+# The application gateway identity should have the Reader role for the target resource group.
+resource "azurerm_role_assignment" "resource_group_reader" {
+  principal_id                     = data.azurerm_user_assigned_identity.aks_agw_uid.principal_id
+  role_definition_name             = "Reader"
+  scope                            = azurerm_resource_group.aks_appgw_demo.id
+  skip_service_principal_aad_check = true
+}
+```
+
+Once these roles are set, the managed identity created for the Application
+Gateway Ingress Controller should be able to adjust all network settings and the
+Application Gateway itself accordingly.
