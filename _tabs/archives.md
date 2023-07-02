@@ -12,7 +12,7 @@ order: 3
 
 <div id="archives" class="pl-xl-2">
 {% for post in site.posts %}
-  {% if post.published== true  %}
+  {% if post.hidden== true  %}
   {% capture this_year %}{{ post.date | date: "%Y" }}{% endcapture %}
   {% capture pre_year %}{{ post.previous.date | date: "%Y" }}{% endcapture %}
   {% if forloop.first %}
