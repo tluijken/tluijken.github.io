@@ -5,6 +5,7 @@ date: 2023-06-13 21:35:00 +0200
 categories: [Azure, DevOps, Infrastructure As Code, Terraform]
 tags: [DevOps, Azure, Aks, Kubernetes, Terraform, Let's Encrypt, Firewall]
 hidden: true;
+published: false
 ---
 
 In today's microservice-oriented era, backend developers often find themselves

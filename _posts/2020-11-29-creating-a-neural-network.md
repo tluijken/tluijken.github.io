@@ -5,6 +5,7 @@ date: 2020-11-29 14:10:00 +0200
 categories: [Machine Learning, AI, Neural Network]
 tags: [neutal network]
 hidden: true;
+published: false
 ---
 
 ## Introduction

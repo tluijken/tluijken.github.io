@@ -7,6 +7,7 @@ tags: [typography]
 math: true
 image: /assets/img/sample/devices-mockup.png
 hidden: true;
+published: false
 ---
 
 This post is to show Markdown syntax rendering on [**Chirpy**](https://github.com/cotes2020/jekyll-theme-chirpy/fork), you can also use it as an example of writing. Now, let's start looking at text and typography.
@@ -93,7 +94,7 @@ _400px image width_
 In addition, you can use class `normal` , `left` and `right` to specify the image position (but in these case, the image caption is prohibited), for example:
 
 - Normal position
-  
+
   ![Desktop View](/assets/img/sample/mockup.png){: width="350" class="normal"}
 
 - Float to the left
