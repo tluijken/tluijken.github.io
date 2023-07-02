@@ -39,5 +39,6 @@ order: 3
     {% assign last_day = "" %}
     {% assign last_month = "" %}
   {% endif %}
+{% endif %}
 {% endfor %}
 </div>
